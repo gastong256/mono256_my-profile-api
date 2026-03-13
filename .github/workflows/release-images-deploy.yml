@@ -114,23 +114,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: publish-images
-    if: ${{ vars.NORTHFLANK_PROJECT_ID != '' && vars.NORTHFLANK_MIGRATE_JOB_ID != '' && vars.NORTHFLANK_REGISTRY_CREDENTIALS_ID != '' && secrets.NORTHFLANK_API_KEY != '' }}
+    if: ${{ vars.NORTHFLANK_PROJECT_ID != '' && vars.NORTHFLANK_MIGRATE_JOB_ID != '' && vars.NORTHFLANK_REGISTRY_CREDENTIALS_ID != '' }}
+    env:
+      NORTHFLANK_API_KEY: ${{ secrets.NORTHFLANK_API_KEY }}
 
     steps:
+      - name: Preflight deploy secret check
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NORTHFLANK_API_KEY:-}" ]; then
+            echo "Northflank API key is not configured, skipping deploy-migrate-job."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
       - name: Point migrate job to released image
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
         uses: northflank/deploy-to-northflank@v1
         with:
-          northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
+          northflank-api-key: ${{ env.NORTHFLANK_API_KEY }}
           project-id: ${{ vars.NORTHFLANK_PROJECT_ID }}
           service-id: ${{ vars.NORTHFLANK_MIGRATE_JOB_ID }}
           image-path: ${{ needs.publish-images.outputs.migrate_image }}:${{ needs.publish-images.outputs.release_tag }}
           credentials-id: ${{ vars.NORTHFLANK_REGISTRY_CREDENTIALS_ID }}
 
       - name: Run migrate job
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
         id: run-migrate
         shell: bash
         env:
-          NORTHFLANK_API_KEY: ${{ secrets.NORTHFLANK_API_KEY }}
           NORTHFLANK_PROJECT_ID: ${{ vars.NORTHFLANK_PROJECT_ID }}
           NORTHFLANK_MIGRATE_JOB_ID: ${{ vars.NORTHFLANK_MIGRATE_JOB_ID }}
         run: |
@@ -153,9 +170,9 @@ jobs:
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Wait for migrate job completion
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
         shell: bash
         env:
-          NORTHFLANK_API_KEY: ${{ secrets.NORTHFLANK_API_KEY }}
           NORTHFLANK_PROJECT_ID: ${{ vars.NORTHFLANK_PROJECT_ID }}
           NORTHFLANK_MIGRATE_JOB_ID: ${{ vars.NORTHFLANK_MIGRATE_JOB_ID }}
           NORTHFLANK_RUN_ID: ${{ steps.run-migrate.outputs.run_id }}
@@ -193,13 +210,30 @@ jobs:
     needs:
       - publish-images
       - deploy-migrate-job
-    if: ${{ vars.NORTHFLANK_PROJECT_ID != '' && vars.NORTHFLANK_SERVICE_ID != '' && vars.NORTHFLANK_REGISTRY_CREDENTIALS_ID != '' && secrets.NORTHFLANK_API_KEY != '' && (needs.deploy-migrate-job.result == 'success' || needs.deploy-migrate-job.result == 'skipped') }}
+    if: ${{ vars.NORTHFLANK_PROJECT_ID != '' && vars.NORTHFLANK_SERVICE_ID != '' && vars.NORTHFLANK_REGISTRY_CREDENTIALS_ID != '' && (needs.deploy-migrate-job.result == 'success' || needs.deploy-migrate-job.result == 'skipped') }}
+    env:
+      NORTHFLANK_API_KEY: ${{ secrets.NORTHFLANK_API_KEY }}
 
     steps:
+      - name: Preflight deploy secret check
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NORTHFLANK_API_KEY:-}" ]; then
+            echo "Northflank API key is not configured, skipping deploy-api-service."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy released runtime image to API service
+        if: ${{ steps.preflight.outputs.enabled == 'true' }}
         uses: northflank/deploy-to-northflank@v1
         with:
-          northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
+          northflank-api-key: ${{ env.NORTHFLANK_API_KEY }}
           project-id: ${{ vars.NORTHFLANK_PROJECT_ID }}
           service-id: ${{ vars.NORTHFLANK_SERVICE_ID }}
           image-path: ${{ needs.publish-images.outputs.runtime_image }}:${{ needs.publish-images.outputs.release_tag }}
