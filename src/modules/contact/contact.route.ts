@@ -32,6 +32,9 @@ export const contactRoute: FastifyPluginAsync = async (fastify) => {
     }
   }, async (request) => {
     const payload = contactBodySchema.parse(request.body);
-    return submitContactRequest(fastify, payload);
+    return submitContactRequest(fastify, payload, {
+      ip: request.ip,
+      userAgent: request.headers['user-agent']
+    });
   });
 };

@@ -8,6 +8,8 @@ export const rateLimitPlugin = fp(async (fastify) => {
   }
 
   await fastify.register(rateLimit, {
-    global: false
+    global: false,
+    skipOnError: true,
+    keyGenerator: (request) => request.ip
   });
 }, { name: 'rate-limit-plugin' });

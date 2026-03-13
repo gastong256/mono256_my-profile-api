@@ -24,8 +24,24 @@ describe('Contact route', () => {
       message: 'Hello',
       createdAt: new Date()
     });
+    const countMock = vi.fn().mockResolvedValue(0);
+    const findFirstMock = vi.fn().mockResolvedValue(null);
 
-    (app.prisma.contactSubmission as unknown as { create: typeof createMock }).create = createMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).create = createMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).count = countMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).findFirst = findFirstMock;
 
     const response = await app.inject({
       method: 'POST',
@@ -39,6 +55,59 @@ describe('Contact route', () => {
 
     expect(response.statusCode).toBe(200);
     expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledWith({
+      data: {
+        name: 'John Doe',
+        email: 'john@example.com',
+        message: 'Hello',
+        fingerprint: expect.any(String),
+        ipHash: expect.any(String),
+        userAgent: expect.any(String)
+      }
+    });
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Contact request received'
+    });
+  });
+
+  it('POST /contact returns success and skips insert for duplicates', async () => {
+    const app = await appPromise;
+    const createMock = vi.fn().mockResolvedValue({});
+    const countMock = vi.fn().mockResolvedValue(0);
+    const findFirstMock = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 'existing' })
+      .mockResolvedValueOnce(null);
+
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).create = createMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).count = countMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).findFirst = findFirstMock;
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/contact',
+      payload: {
+        name: 'John Doe',
+        email: 'john@example.com',
+        message: 'Hello'
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(createMock).not.toHaveBeenCalled();
     expect(response.json()).toEqual({
       success: true,
       message: 'Contact request received'
@@ -63,5 +132,22 @@ describe('Contact route', () => {
       code: expect.any(String),
       message: expect.any(String)
     });
+  });
+
+  it('POST /contact rejects spam honeypot field', async () => {
+    const app = await appPromise;
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/contact',
+      payload: {
+        name: 'John Doe',
+        email: 'john@example.com',
+        message: 'Hello',
+        website: 'https://bot.example'
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 });

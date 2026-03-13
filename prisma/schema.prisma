@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -21,7 +22,13 @@ model ContactSubmission {
   name      String
   email     String
   message   String
+  fingerprint String
+  ipHash    String?
+  userAgent String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([fingerprint, createdAt])
 }

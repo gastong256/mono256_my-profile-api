@@ -26,9 +26,12 @@ The codebase is intentionally minimal today but can grow cleanly:
 
 - Fastify app factory enables deterministic creation for tests and future composition.
 - Config is validated once at startup.
+- Runtime is proxy-aware through `TRUST_PROXY`, so request IP-based policies behave correctly behind ingress.
 - Logger is environment-aware and uses structured logs in production.
 - Swagger/OpenAPI is generated from route schemas.
 - Prisma provides PostgreSQL persistence for `User` authentication and `ContactSubmission` storage.
+- Contact submissions are protected with layered anti-spam controls (rate limiting, honeypot, duplicate and velocity checks, optional Turnstile verification).
+- Bootstrap admin user creation can run on startup through explicit environment toggles, which is useful in managed deploy flows.
 - `GET /health` is liveness; `GET /ready` checks runtime readiness with database ping.
 - Helmet and route-level rate limiting provide baseline API hardening without heavy infrastructure.
 - Docker uses a multi-stage image and a compose workflow with separate migration execution before API startup.

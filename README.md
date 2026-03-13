@@ -24,9 +24,13 @@ Included platform concerns:
 - JWT authentication
 - Seeded development login user
 - Helmet + route-level rate limiting
+- Proxy-aware runtime support (`TRUST_PROXY`) for managed ingress
+- Contact anti-spam hardening (honeypot, velocity controls, duplicate detection, optional Turnstile)
+- Startup admin bootstrap controls for managed deployments
 - Swagger UI + OpenAPI document
 - Pino logging
-- CI pipeline
+- CI pipeline with Docker build validation
+- Automated semantic release + git tag + GitHub release
 - Smoke test
 
 ## 3) Architecture Overview
@@ -52,8 +56,16 @@ See [architecture notes](./docs/architecture.md) for additional context.
 ```text
 mono256_my-profile-api/
   .github/workflows/ci.yml
+  .github/workflows/release.yml
+  .github/workflows/semantic-pr.yml
+  .releaserc.json
+  CHANGELOG.md
   Dockerfile
   docker-compose.yml
+  prisma.config.ts
+  docs/
+    architecture.md
+    deploy-northflank-neon.md
   prisma/
     migrations/
       20260312153800_init/
@@ -73,6 +85,7 @@ mono256_my-profile-api/
       prisma.ts
     plugins/
       cors.ts
+      bootstrap-admin.ts
       helmet.ts
       sensible.ts
       rate-limit.ts
@@ -85,6 +98,7 @@ mono256_my-profile-api/
         health.schema.ts
         health.service.ts
       contact/
+        contact.anti-spam.ts
         contact.route.ts
         contact.schema.ts
         contact.service.ts
@@ -108,13 +122,14 @@ mono256_my-profile-api/
       health.test.ts
     unit/
       contact.service.test.ts
+      env.test.ts
 ```
 
 ## 5) Local Setup
 
 ### Requirements
 
-- Node.js 20+
+- Node.js 22.14+
 - pnpm 10+
 - PostgreSQL 14+
 
@@ -142,11 +157,11 @@ mono256_my-profile-api/
 
 This repository includes a production-oriented container setup:
 
-- Multi-stage `Dockerfile` (`build`, `migrate`, `runtime`)
+- Multi-stage `Dockerfile` (`build`, `migrate`, `seed`, `runtime`)
 - `docker-compose.yml` with:
   - `postgres` (PostgreSQL)
   - `migrate` (one-shot `prisma migrate deploy`)
-  - `seed` (one-shot `prisma:seed` with default local user)
+  - `seed` (one-shot `prisma:seed` for local bootstrap user)
   - `api` (compiled runtime image, local Docker defaults)
 
 ### Run with Docker Compose
@@ -159,6 +174,16 @@ API will be available at `http://localhost:4000`.
 
 Note: Compose runs the API with `NODE_ENV=development` for local usability (`localhost` CORS and Swagger UI).  
 For production containers, set environment variables explicitly (`NODE_ENV=production`, trusted `CORS_ORIGIN`, strong `JWT_SECRET`, `SWAGGER_ENABLED=false`).
+
+## Northflank + Neon (Free Tier)
+
+This project is ready to deploy with:
+
+- Northflank service (`runtime` image target)
+- Northflank migration job (`migrate` image target)
+- Neon managed PostgreSQL
+
+Deployment runbook: [docs/deploy-northflank-neon.md](./docs/deploy-northflank-neon.md)
 
 ### Stop and remove containers
 
@@ -182,18 +207,36 @@ docker compose down -v
 - `LOG_LEVEL`
 - `APP_BASE_URL`
 - `DATABASE_URL`
+- `DIRECT_URL`
 - `CORS_ORIGIN`
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
 - `SWAGGER_ENABLED`
 - `RATE_LIMIT_ENABLED`
+- `TRUST_PROXY`
+- `CONTACT_MIN_INTERVAL_SECONDS`
+- `CONTACT_MAX_BY_IP_PER_HOUR`
+- `CONTACT_MAX_BY_EMAIL_PER_HOUR`
+- `CONTACT_DUPLICATE_WINDOW_MINUTES`
+- `CONTACT_FINGERPRINT_SALT`
+- `CONTACT_REQUIRE_TURNSTILE`
+- `TURNSTILE_SECRET_KEY`
+- `TURNSTILE_VERIFY_URL`
 - `AUTH_RATE_LIMIT_MAX`
 - `AUTH_RATE_LIMIT_WINDOW`
 - `CONTACT_RATE_LIMIT_MAX`
 - `CONTACT_RATE_LIMIT_WINDOW`
+- `BOOTSTRAP_ADMIN_ENABLED`
+- `BOOTSTRAP_ADMIN_EMAIL`
+- `BOOTSTRAP_ADMIN_NAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_ADMIN_UPDATE_EXISTING`
 - `SEED_USER_EMAIL`
 - `SEED_USER_NAME`
 - `SEED_USER_PASSWORD`
+- `ALLOW_PROD_SEED`
+
+Sensitive variables also support `<KEY>_FILE` variants for secret-file based deployments.
 
 ## 7) Available Scripts
 
@@ -203,6 +246,8 @@ docker compose down -v
 - `pnpm lint` - run ESLint
 - `pnpm typecheck` - run TypeScript checks without emit
 - `pnpm test` - run test suite
+- `pnpm release` - run semantic release (CI usage)
+- `pnpm release:dry-run` - preview semantic release outcome
 - `pnpm prisma:generate` - generate Prisma client
 - `pnpm prisma:migrate:dev` - run development migrations
 - `pnpm prisma:migrate:deploy` - apply committed migrations in deploy environments
@@ -257,7 +302,9 @@ Body:
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "message": "Hello"
+  "message": "Hello",
+  "website": "",
+  "captchaToken": "<optional-turnstile-token>"
 }
 ```
 
@@ -274,6 +321,9 @@ Behavior:
 
 - validates input with Zod
 - persists a `ContactSubmission` record in PostgreSQL via Prisma
+- accepts an optional honeypot field (`website`) that should stay empty
+- enforces velocity limits and duplicate suppression on the server side
+- supports optional Turnstile verification when enabled
 
 ### `POST /auth/login`
 
@@ -334,15 +384,31 @@ Response:
 - Swagger UI: `GET /docs`
 - Both are available only when `SWAGGER_ENABLED=true` (default in development).
 
-## 11) Production Notes
+## 11) Release Automation
+
+- `semantic-release` runs automatically after successful `CI` pushes to `main`.
+- It creates:
+  - semver git tag (`vX.Y.Z`)
+  - GitHub Release notes
+  - changelog updates in `CHANGELOG.md`
+- A manual `Release` workflow dispatch is also available for controlled reruns.
+
+Commit and PR messages should follow Conventional Commits for predictable releases.
+
+## 12) Production Notes
 
 - Set a strong `JWT_SECRET` (minimum 32 characters) in production.
 - Set explicit trusted production `CORS_ORIGIN` values (no `*` and no localhost origins).
 - Keep `SWAGGER_ENABLED=false` in production.
+- Set `TRUST_PROXY=true` when running behind managed ingress/load balancers.
+- With Neon, use pooled `DATABASE_URL` for runtime and direct `DIRECT_URL` for Prisma migrations.
+- Set strong `CONTACT_FINGERPRINT_SALT` and enable Turnstile in public deployments.
+- Keep `BOOTSTRAP_ADMIN_ENABLED=false` by default; enable only for controlled bootstrap events.
+- This app supports `<KEY>_FILE` secret variants for sensitive keys in container orchestrators.
 - Run migrations during deploy with:
   - `pnpm prisma:migrate:deploy`
 
-## 12) Future Growth Path
+## 13) Future Growth Path
 
 This baseline is ready to evolve without major rewrites:
 

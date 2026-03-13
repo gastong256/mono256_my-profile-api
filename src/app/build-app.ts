@@ -8,7 +8,9 @@ import { registerRoutes } from './register-routes';
 
 export async function buildApp(config: AppConfig) {
   const app = Fastify({
-    logger: buildLoggerOptions(config)
+    logger: buildLoggerOptions(config),
+    trustProxy: config.TRUST_PROXY,
+    bodyLimit: 262_144
   });
 
   app.decorate('config', config);

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { corsPlugin } from '../plugins/cors';
+import { bootstrapAdminPlugin } from '../plugins/bootstrap-admin';
 import { helmetPlugin } from '../plugins/helmet';
 import { jwtPlugin } from '../plugins/jwt';
 import { prismaPlugin } from '../plugins/prisma';
@@ -14,5 +15,6 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   await app.register(rateLimitPlugin);
   await app.register(jwtPlugin);
   await app.register(prismaPlugin);
+  await app.register(bootstrapAdminPlugin);
   await app.register(swaggerPlugin);
 }
