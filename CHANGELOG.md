@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/gastong256/mono256_my-profile-api/compare/v1.0.0...v1.1.0) (2026-03-13)
+
+### Features
+
+* publish immutable GHCR images on releases and prepare automated Northflank deploy wiring ([914b52a](https://github.com/gastong256/mono256_my-profile-api/commit/914b52a714c57ab6841527a8e2798bcf8b950ab3))
+
 ## 1.0.0 (2026-03-13)
 
 ### Features
