@@ -146,6 +146,7 @@ This repository includes a production-oriented container setup:
 - `docker-compose.yml` with:
   - `postgres` (PostgreSQL)
   - `migrate` (one-shot `prisma migrate deploy`)
+  - `seed` (one-shot `prisma:seed` with default local user)
   - `api` (compiled runtime image, local Docker defaults)
 
 ### Run with Docker Compose
