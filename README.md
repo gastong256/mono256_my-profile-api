@@ -57,6 +57,7 @@ See [architecture notes](./docs/architecture.md) for additional context.
 mono256_my-profile-api/
   .github/workflows/ci.yml
   .github/workflows/release.yml
+  .github/workflows/release-images-deploy.yml
   .github/workflows/semantic-pr.yml
   .releaserc.json
   CHANGELOG.md
@@ -392,8 +393,36 @@ Response:
   - GitHub Release notes
   - changelog updates in `CHANGELOG.md`
 - A manual `Release` workflow dispatch is also available for controlled reruns.
+- On every published GitHub Release, `release-images-deploy.yml`:
+  - builds immutable GHCR images for `runtime`, `migrate`, and `seed`
+  - pushes `vX.Y.Z` and `sha-<commit>` tags
+  - updates Northflank workloads to the released immutable tag
+  - executes the migrate job run and waits for completion before API deploy
 
 Commit and PR messages should follow Conventional Commits for predictable releases.
+
+### GitHub Configuration for Auto Deploy
+
+Repository Variables (`Settings > Secrets and variables > Actions > Variables`):
+
+- `NORTHFLANK_PROJECT_ID`
+- `NORTHFLANK_SERVICE_ID`
+- `NORTHFLANK_MIGRATE_JOB_ID`
+- `NORTHFLANK_REGISTRY_CREDENTIALS_ID`
+
+Repository Secrets (`Settings > Secrets and variables > Actions > Secrets`):
+
+- `NORTHFLANK_API_KEY`
+
+Workflow permissions (`Settings > Actions > General`):
+
+- Read and write permissions
+- Allow GitHub Actions to create and approve pull requests (recommended for release automation)
+
+GHCR visibility:
+
+- Keep images under `ghcr.io/<owner>/<repo>-runtime`, `-migrate`, `-seed`
+- Set package visibility to public in the GHCR package settings if you want public pulls
 
 ## 12) Production Notes
 

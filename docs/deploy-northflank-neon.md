@@ -148,6 +148,11 @@ The repository also provides:
 
 - `Semantic PR Title` workflow (Conventional Commit title gate)
 - `Release` workflow (automatic after CI on `main`, and manual dispatch support)
+- `Release Images and Deploy` workflow:
+  - triggered by published GitHub releases
+  - pushes immutable GHCR images (`vX.Y.Z`, `sha-<commit>`)
+  - updates Northflank migrate job and API service image references
+  - runs migrate job before API deploy
 
 Rollback approach:
 
@@ -172,3 +177,32 @@ Run after each deploy:
 - For contact forms, keep `CONTACT_REQUIRE_TURNSTILE=true` in public production deployments.
 - Keep contact form protected by frontend controls (hidden honeypot field + client validation).
 - Keep `BOOTSTRAP_ADMIN_ENABLED=false` by default and enable it only for controlled bootstrap operations.
+
+## 9) GitHub to Northflank deployment wiring
+
+Add GitHub repository variables:
+
+- `NORTHFLANK_PROJECT_ID`
+- `NORTHFLANK_SERVICE_ID`
+- `NORTHFLANK_MIGRATE_JOB_ID`
+- `NORTHFLANK_REGISTRY_CREDENTIALS_ID`
+
+Add GitHub repository secret:
+
+- `NORTHFLANK_API_KEY`
+
+How to obtain values:
+
+1. `NORTHFLANK_API_KEY`: Northflank account settings -> API keys -> create key.
+2. `NORTHFLANK_PROJECT_ID`: from the project settings/details page.
+3. `NORTHFLANK_SERVICE_ID`: from your API service details page.
+4. `NORTHFLANK_MIGRATE_JOB_ID`: from your migrate job details page.
+5. `NORTHFLANK_REGISTRY_CREDENTIALS_ID`: create saved registry credentials in Northflank for GHCR, then copy its ID.
+
+GHCR notes:
+
+- The workflow publishes to:
+  - `ghcr.io/<owner>/<repo>-runtime`
+  - `ghcr.io/<owner>/<repo>-migrate`
+  - `ghcr.io/<owner>/<repo>-seed`
+- If you want public images, set package visibility to public in GitHub Packages settings.
