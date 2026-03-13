@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.0...v1.1.1) (2026-03-13)
+
+### Bug Fixes
+
+* avoid secrets in job-level if and gate Northflank deploy with preflight checks ([3993e09](https://github.com/gastong256/mono256_my-profile-api/commit/3993e097fac8d34397d904754b786b217dea6525))
+
 ## [1.1.0](https://github.com/gastong256/mono256_my-profile-api/compare/v1.0.0...v1.1.0) (2026-03-13)
 
 ### Features
