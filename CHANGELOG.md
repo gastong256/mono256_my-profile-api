@@ -1,3 +1,9 @@
+## [1.1.3](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.2...v1.1.3) (2026-03-13)
+
+### Bug Fixes
+
+* trigger release pipeline ([b3aafb9](https://github.com/gastong256/mono256_my-profile-api/commit/b3aafb9b4ba0d295aeda1817d958667b779bc5d8))
+
 ## [1.1.2](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.1...v1.1.2) (2026-03-13)
 
 ### Bug Fixes
