@@ -190,6 +190,7 @@ Add GitHub repository variables:
 Add GitHub repository secret:
 
 - `NORTHFLANK_API_KEY`
+- `SEMANTIC_RELEASE_PAT` (recommended for release event chaining)
 
 How to obtain values:
 
@@ -198,6 +199,7 @@ How to obtain values:
 3. `NORTHFLANK_SERVICE_ID`: from your API service details page.
 4. `NORTHFLANK_MIGRATE_JOB_ID`: from your migrate job details page.
 5. `NORTHFLANK_REGISTRY_CREDENTIALS_ID`: create saved registry credentials in Northflank for GHCR, then copy its ID.
+6. `SEMANTIC_RELEASE_PAT`: GitHub -> Settings -> Developer settings -> Personal access tokens -> create token with repository workflow/release permissions.
 
 GHCR notes:
 
@@ -206,3 +208,4 @@ GHCR notes:
   - `ghcr.io/<owner>/<repo>-migrate`
   - `ghcr.io/<owner>/<repo>-seed`
 - If you want public images, set package visibility to public in GitHub Packages settings.
+- `Release Images and Deploy` also supports manual `workflow_dispatch` with a `release_tag` input for fallback runs.

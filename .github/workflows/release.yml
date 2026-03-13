@@ -53,7 +53,19 @@ jobs:
       - name: Build app
         run: pnpm build
 
+      - name: Token source info
+        shell: bash
+        env:
+          SEMANTIC_RELEASE_PAT: ${{ secrets.SEMANTIC_RELEASE_PAT }}
+        run: |
+          if [ -n "${SEMANTIC_RELEASE_PAT:-}" ]; then
+            echo "Using SEMANTIC_RELEASE_PAT for semantic-release events."
+          else
+            echo "SEMANTIC_RELEASE_PAT is not set, falling back to GITHUB_TOKEN."
+          fi
+
       - name: Semantic release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SEMANTIC_RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_PAT || secrets.GITHUB_TOKEN }}
         run: pnpm release

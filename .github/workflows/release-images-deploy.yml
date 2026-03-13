@@ -1,6 +1,12 @@
 name: Release Images and Deploy
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Immutable release tag to publish/deploy (for example: v1.2.3)'
+        required: true
+        type: string
   release:
     types:
       - published
@@ -10,7 +16,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: release-${{ github.event.release.tag_name }}
+  group: release-${{ github.event.release.tag_name || github.event.inputs.release_tag || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -18,17 +24,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
-      release_tag: ${{ steps.meta.outputs.release_tag }}
+      release_tag: ${{ steps.resolve-tag.outputs.release_tag }}
       release_sha: ${{ steps.meta.outputs.release_sha }}
       runtime_image: ${{ steps.meta.outputs.runtime_image }}
       migrate_image: ${{ steps.meta.outputs.migrate_image }}
       seed_image: ${{ steps.meta.outputs.seed_image }}
 
     steps:
-      - name: Checkout release tag
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_tag='${{ github.event.release.tag_name || github.event.inputs.release_tag }}'
+
+          if [ -z "$release_tag" ]; then
+            echo "release_tag is required"
+            exit 1
+          fi
+
+          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+            echo "Invalid release tag format: $release_tag"
+            echo "Expected: vX.Y.Z"
+            exit 1
+          fi
+
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout resolved release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.resolve-tag.outputs.release_tag }}
 
       - name: Prepare image metadata
         id: meta
@@ -36,12 +63,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          release_tag='${{ github.event.release.tag_name }}'
-          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
-            echo "Invalid release tag format: $release_tag"
-            echo "Expected: vX.Y.Z"
-            exit 1
-          fi
+          release_tag='${{ steps.resolve-tag.outputs.release_tag }}'
 
           owner_lc=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
           repo_name="${GITHUB_REPOSITORY#*/}"
@@ -52,7 +74,6 @@ jobs:
           migrate_image="ghcr.io/${owner_lc}/${repo_lc}-migrate"
           seed_image="ghcr.io/${owner_lc}/${repo_lc}-seed"
 
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
           echo "runtime_image=$runtime_image" >> "$GITHUB_OUTPUT"
           echo "migrate_image=$migrate_image" >> "$GITHUB_OUTPUT"
@@ -77,7 +98,7 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ${{ steps.meta.outputs.runtime_image }}:${{ steps.meta.outputs.release_tag }}
+            ${{ steps.meta.outputs.runtime_image }}:${{ steps.resolve-tag.outputs.release_tag }}
             ${{ steps.meta.outputs.runtime_image }}:sha-${{ steps.meta.outputs.release_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -91,7 +112,7 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ${{ steps.meta.outputs.migrate_image }}:${{ steps.meta.outputs.release_tag }}
+            ${{ steps.meta.outputs.migrate_image }}:${{ steps.resolve-tag.outputs.release_tag }}
             ${{ steps.meta.outputs.migrate_image }}:sha-${{ steps.meta.outputs.release_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -105,7 +126,7 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ${{ steps.meta.outputs.seed_image }}:${{ steps.meta.outputs.release_tag }}
+            ${{ steps.meta.outputs.seed_image }}:${{ steps.resolve-tag.outputs.release_tag }}
             ${{ steps.meta.outputs.seed_image }}:sha-${{ steps.meta.outputs.release_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

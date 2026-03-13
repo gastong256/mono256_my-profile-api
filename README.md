@@ -413,6 +413,7 @@ Repository Variables (`Settings > Secrets and variables > Actions > Variables`):
 Repository Secrets (`Settings > Secrets and variables > Actions > Secrets`):
 
 - `NORTHFLANK_API_KEY`
+- `SEMANTIC_RELEASE_PAT` (recommended): GitHub PAT used by `Release` workflow so `release.published` events trigger downstream workflows
 
 Workflow permissions (`Settings > Actions > General`):
 
@@ -423,6 +424,11 @@ GHCR visibility:
 
 - Keep images under `ghcr.io/<owner>/<repo>-runtime`, `-migrate`, `-seed`
 - Set package visibility to public in the GHCR package settings if you want public pulls
+
+Fallback:
+
+- If no PAT is configured, `Release` falls back to `GITHUB_TOKEN`.
+- In that mode, if GitHub does not emit downstream release events, run `Release Images and Deploy` manually with `release_tag` input.
 
 ## 12) Production Notes
 
