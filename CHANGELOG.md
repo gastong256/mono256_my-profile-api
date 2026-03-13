@@ -1,3 +1,9 @@
+## [1.1.4](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.3...v1.1.4) (2026-03-13)
+
+### Bug Fixes
+
+* update Northflank migrate job image via API instead of service action ([cf4abde](https://github.com/gastong256/mono256_my-profile-api/commit/cf4abde855bf39b8f6fa06ed6503c5bf14bddad7))
+
 ## [1.1.3](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.2...v1.1.3) (2026-03-13)
 
 ### Bug Fixes
