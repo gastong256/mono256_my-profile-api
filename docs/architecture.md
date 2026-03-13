@@ -31,3 +31,4 @@ The codebase is intentionally minimal today but can grow cleanly:
 - Prisma provides PostgreSQL persistence for `User` authentication and `ContactSubmission` storage.
 - `GET /health` is liveness; `GET /ready` checks runtime readiness with database ping.
 - Helmet and route-level rate limiting provide baseline API hardening without heavy infrastructure.
+- Docker uses a multi-stage image and a compose workflow with separate migration execution before API startup.

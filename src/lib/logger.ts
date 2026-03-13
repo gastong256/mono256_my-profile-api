@@ -7,6 +7,19 @@ export function buildLoggerOptions(config: AppConfig): FastifyServerOptions['log
   };
 
   if (config.NODE_ENV === 'development') {
+    const hasPrettyTransport = (() => {
+      try {
+        require.resolve('pino-pretty');
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    if (!hasPrettyTransport) {
+      return baseOptions;
+    }
+
     return {
       ...baseOptions,
       transport: {

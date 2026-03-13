@@ -1,0 +1,62 @@
+name: mono256-my-profile-api
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mono256_my_profile
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U user -d mono256_my_profile']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/mono256_my_profile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 4000
+      APP_BASE_URL: http://localhost:4000
+      LOG_LEVEL: info
+      DATABASE_URL: postgresql://user:password@postgres:5432/mono256_my_profile
+      CORS_ORIGIN: http://localhost:3000
+      JWT_SECRET: ${JWT_SECRET:-change_me_change_me_change_me_change_me}
+      JWT_EXPIRES_IN: 1d
+      SWAGGER_ENABLED: 'true'
+      RATE_LIMIT_ENABLED: 'true'
+      AUTH_RATE_LIMIT_MAX: 5
+      AUTH_RATE_LIMIT_WINDOW: 1 minute
+      CONTACT_RATE_LIMIT_MAX: 10
+      CONTACT_RATE_LIMIT_WINDOW: 1 minute
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - '4000:4000'
+
+volumes:
+  postgres_data:

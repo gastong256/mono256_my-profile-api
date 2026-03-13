@@ -52,6 +52,8 @@ See [architecture notes](./docs/architecture.md) for additional context.
 ```text
 mono256_my-profile-api/
   .github/workflows/ci.yml
+  Dockerfile
+  docker-compose.yml
   prisma/
     migrations/
       20260312153800_init/
@@ -135,6 +137,39 @@ mono256_my-profile-api/
 
 - Email: `admin@gastong256.dev`
 - Password: `ChangeMe123!`
+
+## Docker Setup
+
+This repository includes a production-oriented container setup:
+
+- Multi-stage `Dockerfile` (`build`, `migrate`, `runtime`)
+- `docker-compose.yml` with:
+  - `postgres` (PostgreSQL)
+  - `migrate` (one-shot `prisma migrate deploy`)
+  - `api` (compiled runtime image, local Docker defaults)
+
+### Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+API will be available at `http://localhost:4000`.
+
+Note: Compose runs the API with `NODE_ENV=development` for local usability (`localhost` CORS and Swagger UI).  
+For production containers, set environment variables explicitly (`NODE_ENV=production`, trusted `CORS_ORIGIN`, strong `JWT_SECRET`, `SWAGGER_ENABLED=false`).
+
+### Stop and remove containers
+
+```bash
+docker compose down
+```
+
+### Remove containers and database volume
+
+```bash
+docker compose down -v
+```
 
 ## 6) Environment Variables
 
