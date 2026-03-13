@@ -1,3 +1,9 @@
+## [1.1.2](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.1...v1.1.2) (2026-03-13)
+
+### Bug Fixes
+
+* use semantic-release PAT with safe fallback and manual release-tag dispatch for images/deploy ([afb8aa9](https://github.com/gastong256/mono256_my-profile-api/commit/afb8aa9c23eb82302d9b33cee30c227bef29310e))
+
 ## [1.1.1](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.0...v1.1.1) (2026-03-13)
 
 ### Bug Fixes
