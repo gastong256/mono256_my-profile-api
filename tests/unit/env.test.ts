@@ -39,4 +39,30 @@ describe('loadEnv', () => {
       });
     }).toThrow('TURNSTILE_SECRET_KEY is required when CONTACT_REQUIRE_TURNSTILE=true');
   });
+
+  it('requires discord webhook url when contact notification delivery is enabled', () => {
+    expect(() => {
+      loadEnv({
+        NODE_ENV: 'development',
+        DATABASE_URL: 'postgresql://user:password@localhost:5432/mono256_my_profile',
+        DIRECT_URL: 'postgresql://user:password@localhost:5432/mono256_my_profile',
+        CORS_ORIGIN: 'http://localhost:3000',
+        JWT_SECRET: 'test_secret_key_which_is_long_enough',
+        CONTACT_NOTIFICATION_ENABLED: 'true'
+      });
+    }).toThrow('DISCORD_WEBHOOK_URL is required when CONTACT_NOTIFICATION_ENABLED=true');
+  });
+
+  it('requires https for discord webhook url', () => {
+    expect(() => {
+      loadEnv({
+        NODE_ENV: 'development',
+        DATABASE_URL: 'postgresql://user:password@localhost:5432/mono256_my_profile',
+        DIRECT_URL: 'postgresql://user:password@localhost:5432/mono256_my_profile',
+        CORS_ORIGIN: 'http://localhost:3000',
+        JWT_SECRET: 'test_secret_key_which_is_long_enough',
+        DISCORD_WEBHOOK_URL: 'http://discord.com/api/webhooks/example'
+      });
+    }).toThrow('DISCORD_WEBHOOK_URL must use https');
+  });
 });

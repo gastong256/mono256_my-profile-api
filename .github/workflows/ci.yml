@@ -74,15 +74,28 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build migrate image
+      - name: Build migrate-seed image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          target: migrate
+          target: migrate-seed
           push: false
           load: false
           provenance: false
-          tags: mono256-my-profile-api:migrate
+          tags: mono256-my-profile-api:migrate-seed
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build retry image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: retry
+          push: false
+          load: false
+          provenance: false
+          tags: mono256-my-profile-api:retry
           cache-from: type=gha
           cache-to: type=gha,mode=max

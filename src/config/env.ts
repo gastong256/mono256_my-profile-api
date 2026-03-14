@@ -19,6 +19,7 @@ const SECRET_FILE_COMPAT_KEYS = [
   'JWT_SECRET',
   'CONTACT_FINGERPRINT_SALT',
   'TURNSTILE_SECRET_KEY',
+  'DISCORD_WEBHOOK_URL',
   'BOOTSTRAP_ADMIN_PASSWORD'
 ] as const;
 
@@ -57,6 +58,11 @@ const rawEnvSchema = z.object({
   CONTACT_REQUIRE_TURNSTILE: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.preprocess(emptyStringToUndefined, z.string().min(1).optional()),
   TURNSTILE_VERIFY_URL: z.string().url().default(DEFAULT_TURNSTILE_VERIFY_URL),
+  CONTACT_NOTIFICATION_ENABLED: z.string().optional(),
+  DISCORD_WEBHOOK_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+  DISCORD_WEBHOOK_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  CONTACT_DELIVERY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  CONTACT_DELIVERY_BATCH_SIZE: z.coerce.number().int().positive().default(50),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   AUTH_RATE_LIMIT_WINDOW: z.string().min(1).default('1 minute'),
   CONTACT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
@@ -71,12 +77,14 @@ const rawEnvSchema = z.object({
 export type AppConfig = Omit<
   z.infer<typeof rawEnvSchema>,
   'SWAGGER_ENABLED' | 'RATE_LIMIT_ENABLED' | 'TRUST_PROXY' | 'CONTACT_REQUIRE_TURNSTILE' |
+  'CONTACT_NOTIFICATION_ENABLED' |
   'BOOTSTRAP_ADMIN_ENABLED' | 'BOOTSTRAP_ADMIN_UPDATE_EXISTING'
 > & {
   SWAGGER_ENABLED: boolean;
   RATE_LIMIT_ENABLED: boolean;
   TRUST_PROXY: boolean | number | string | string[];
   CONTACT_REQUIRE_TURNSTILE: boolean;
+  CONTACT_NOTIFICATION_ENABLED: boolean;
   CONTACT_FINGERPRINT_SALT: string;
   BOOTSTRAP_ADMIN_ENABLED: boolean;
   BOOTSTRAP_ADMIN_UPDATE_EXISTING: boolean;
@@ -173,6 +181,11 @@ export function loadEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppConfig {
     false,
     'CONTACT_REQUIRE_TURNSTILE'
   );
+  const contactNotificationEnabled = parseBoolean(
+    env.CONTACT_NOTIFICATION_ENABLED,
+    Boolean(env.DISCORD_WEBHOOK_URL),
+    'CONTACT_NOTIFICATION_ENABLED'
+  );
   const bootstrapAdminEnabled = parseBoolean(
     env.BOOTSTRAP_ADMIN_ENABLED,
     false,
@@ -190,6 +203,7 @@ export function loadEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppConfig {
     RATE_LIMIT_ENABLED: rateLimitEnabled,
     TRUST_PROXY: trustProxy,
     CONTACT_REQUIRE_TURNSTILE: contactRequireTurnstile,
+    CONTACT_NOTIFICATION_ENABLED: contactNotificationEnabled,
     BOOTSTRAP_ADMIN_ENABLED: bootstrapAdminEnabled,
     BOOTSTRAP_ADMIN_UPDATE_EXISTING: bootstrapAdminUpdateExisting,
     CONTACT_FINGERPRINT_SALT: env.CONTACT_FINGERPRINT_SALT ?? env.JWT_SECRET
@@ -197,6 +211,17 @@ export function loadEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppConfig {
 
   if (contactRequireTurnstile && !env.TURNSTILE_SECRET_KEY) {
     throw new Error('TURNSTILE_SECRET_KEY is required when CONTACT_REQUIRE_TURNSTILE=true');
+  }
+
+  if (contactNotificationEnabled && !env.DISCORD_WEBHOOK_URL) {
+    throw new Error('DISCORD_WEBHOOK_URL is required when CONTACT_NOTIFICATION_ENABLED=true');
+  }
+
+  if (env.DISCORD_WEBHOOK_URL) {
+    const webhookUrl = new URL(env.DISCORD_WEBHOOK_URL);
+    if (webhookUrl.protocol !== 'https:') {
+      throw new Error('DISCORD_WEBHOOK_URL must use https');
+    }
   }
 
   if (bootstrapAdminEnabled) {

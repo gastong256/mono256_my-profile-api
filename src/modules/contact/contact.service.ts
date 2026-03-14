@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { runContactSpamProtection } from './contact.anti-spam';
+import { canSendContactNotifications, deliverContactSubmission } from './contact.delivery';
 import type { ContactBody, ContactResponse } from './contact.schema';
 
 export async function submitContactRequest(
@@ -35,14 +36,15 @@ export async function submitContactRequest(
     };
   }
 
-  await fastify.prisma.contactSubmission.create({
+  const submission = await fastify.prisma.contactSubmission.create({
     data: {
       name: payload.name,
       email: normalizedEmail,
       message: payload.message,
       fingerprint: spamResult.fingerprint,
       ipHash: spamResult.ipHash,
-      userAgent: spamResult.userAgent
+      userAgent: spamResult.userAgent,
+      deliveryStatus: canSendContactNotifications(fastify.config) ? 'PENDING' : 'SKIPPED'
     }
   }).catch((error: unknown) => {
     if (error instanceof Prisma.PrismaClientInitializationError) {
@@ -54,12 +56,27 @@ export async function submitContactRequest(
   fastify.log.info(
     {
       event: 'contact.submission.created',
+      submissionId: submission.id,
       nameLength: payload.name.length,
       messageLength: payload.message.length,
       ip: context.ip
     },
     'Contact submission persisted'
   );
+
+  if (canSendContactNotifications(fastify.config)) {
+    setImmediate(() => {
+      void deliverContactSubmission(fastify.prisma, fastify.log, fastify.config, submission).catch((error) => {
+        fastify.log.error(
+          {
+            err: error,
+            submissionId: submission.id
+          },
+          'Unexpected failure while dispatching contact submission notification'
+        );
+      });
+    });
+  }
 
   return {
     success: true,

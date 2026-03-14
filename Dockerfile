@@ -29,13 +29,16 @@ RUN pnpm prisma:generate
 RUN pnpm build
 RUN pnpm prune --prod
 
-FROM deps AS migrate
+FROM deps AS migrate-seed
 
+COPY tsconfig.json tsconfig.build.json ./
 COPY prisma ./prisma
+COPY src ./src
+COPY scripts ./scripts
 
 RUN pnpm prisma:generate
 
-CMD ["pnpm", "prisma:migrate:deploy"]
+CMD ["/bin/sh", "./scripts/migrate-and-seed.sh"]
 
 FROM deps AS seed
 
@@ -74,3 +77,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]
+
+FROM runtime AS retry
+CMD ["node", "dist/scripts/retry-contact-deliveries.js"]

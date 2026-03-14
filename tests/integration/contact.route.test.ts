@@ -62,7 +62,8 @@ describe('Contact route', () => {
         message: 'Hello',
         fingerprint: expect.any(String),
         ipHash: expect.any(String),
-        userAgent: expect.any(String)
+        userAgent: expect.any(String),
+        deliveryStatus: 'SKIPPED'
       }
     });
     expect(response.json()).toEqual({

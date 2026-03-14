@@ -15,6 +15,9 @@ Implemented modules and endpoints:
 - `POST /contact`
 - `POST /auth/login`
 - `GET /auth/me` (JWT protected)
+- `GET /admin/contact-submissions` (JWT protected)
+- `GET /admin/contact-submissions/:id` (JWT protected)
+- `PATCH /admin/contact-submissions/:id` (JWT protected)
 
 Included platform concerns:
 
@@ -26,6 +29,8 @@ Included platform concerns:
 - Helmet + route-level rate limiting
 - Proxy-aware runtime support (`TRUST_PROXY`) for managed ingress
 - Contact anti-spam hardening (honeypot, velocity controls, duplicate detection, optional Turnstile)
+- Contact delivery state tracking with Discord webhook notifications
+- Retry command for pending/failed contact deliveries
 - Startup admin bootstrap controls for managed deployments
 - Swagger UI + OpenAPI document
 - Pino logging
@@ -100,6 +105,7 @@ mono256_my-profile-api/
         health.service.ts
       contact/
         contact.anti-spam.ts
+        contact.delivery.ts
         contact.route.ts
         contact.schema.ts
         contact.service.ts
@@ -108,6 +114,12 @@ mono256_my-profile-api/
         auth.schema.ts
         auth.service.ts
         auth.types.ts
+      admin/
+        admin.route.ts
+        admin.schema.ts
+        admin.service.ts
+    scripts/
+      retry-contact-deliveries.ts
     shared/
       schemas/
       types/
@@ -117,11 +129,13 @@ mono256_my-profile-api/
     helpers/
       test-config.ts
     integration/
+      admin.route.test.ts
       auth.route.test.ts
       contact.route.test.ts
     smoke/
       health.test.ts
     unit/
+      contact.delivery.test.ts
       contact.service.test.ts
       env.test.ts
 ```
@@ -158,7 +172,7 @@ mono256_my-profile-api/
 
 This repository includes a production-oriented container setup:
 
-- Multi-stage `Dockerfile` (`build`, `migrate`, `seed`, `runtime`)
+- Multi-stage `Dockerfile` (`build`, `migrate-seed`, `seed`, `runtime`, `retry`)
 - `docker-compose.yml` with:
   - `postgres` (PostgreSQL)
   - `migrate` (one-shot `prisma migrate deploy`)
@@ -223,6 +237,11 @@ docker compose down -v
 - `CONTACT_REQUIRE_TURNSTILE`
 - `TURNSTILE_SECRET_KEY`
 - `TURNSTILE_VERIFY_URL`
+- `CONTACT_NOTIFICATION_ENABLED`
+- `DISCORD_WEBHOOK_URL`
+- `DISCORD_WEBHOOK_TIMEOUT_MS`
+- `CONTACT_DELIVERY_MAX_ATTEMPTS`
+- `CONTACT_DELIVERY_BATCH_SIZE`
 - `AUTH_RATE_LIMIT_MAX`
 - `AUTH_RATE_LIMIT_WINDOW`
 - `CONTACT_RATE_LIMIT_MAX`
@@ -235,6 +254,7 @@ docker compose down -v
 - `SEED_USER_EMAIL`
 - `SEED_USER_NAME`
 - `SEED_USER_PASSWORD`
+- `RUN_SEED_AFTER_MIGRATE`
 - `ALLOW_PROD_SEED`
 
 Sensitive variables also support `<KEY>_FILE` variants for secret-file based deployments.
@@ -253,6 +273,8 @@ Sensitive variables also support `<KEY>_FILE` variants for secret-file based dep
 - `pnpm prisma:migrate:dev` - run development migrations
 - `pnpm prisma:migrate:deploy` - apply committed migrations in deploy environments
 - `pnpm prisma:seed` - seed a local auth user
+- `pnpm contact:retry-delivery` - retry pending/failed contact deliveries
+- `pnpm contact:retry-delivery:compiled` - retry deliveries from compiled `dist` build
 
 ## 8) Implemented Endpoints
 
@@ -325,6 +347,45 @@ Behavior:
 - accepts an optional honeypot field (`website`) that should stay empty
 - enforces velocity limits and duplicate suppression on the server side
 - supports optional Turnstile verification when enabled
+- tracks delivery state (`PENDING`, `SENT`, `FAILED`, `SKIPPED`) for Discord notifications
+- dispatches delivery to Discord asynchronously to keep request latency low
+
+### `GET /admin/contact-submissions`
+
+Header:
+
+- `Authorization: Bearer <token>`
+
+Query params:
+
+- `page` (default `1`)
+- `pageSize` (default `20`, max `100`)
+- `reviewStatus` (`NEW`, `IN_REVIEW`, `RESOLVED`, `SPAM`) optional
+- `deliveryStatus` (`PENDING`, `SENT`, `FAILED`, `SKIPPED`) optional
+
+### `GET /admin/contact-submissions/:id`
+
+Header:
+
+- `Authorization: Bearer <token>`
+
+Returns full stored contact submission details.
+
+### `PATCH /admin/contact-submissions/:id`
+
+Header:
+
+- `Authorization: Bearer <token>`
+
+Body:
+
+```json
+{
+  "reviewStatus": "RESOLVED"
+}
+```
+
+Updates review workflow state for a submission.
 
 ### `POST /auth/login`
 
@@ -375,6 +436,7 @@ Response:
 - Auth is JWT-based using `@fastify/jwt`.
 - Login validates credentials against the `User` table.
 - Protected routes use `fastify.authenticate` pre-handler.
+- Admin routes currently reuse the same JWT guard (no role model yet).
 - JWT payload contains minimal user identity (`sub`, `email`, `name`).
 - Passwords are stored as hashes (`bcryptjs`) and verified at login.
 - Auth and contact endpoints are rate-limited.
@@ -394,10 +456,10 @@ Response:
   - changelog updates in `CHANGELOG.md`
 - A manual `Release` workflow dispatch is also available for controlled reruns.
 - On every published GitHub Release, `release-images-deploy.yml`:
-  - builds immutable GHCR images for `runtime`, `migrate`, and `seed`
+  - builds immutable GHCR images for `runtime`, `migrate-seed`, and `retry`
   - pushes `vX.Y.Z` and `sha-<commit>` tags
-  - updates Northflank workloads to the released immutable tag
-  - executes the migrate job run and waits for completion before API deploy
+  - updates the Northflank migrate-seed job image and optionally retry job image
+  - executes the migrate-seed job run and waits for completion before API deploy
 
 Commit and PR messages should follow Conventional Commits for predictable releases.
 
@@ -408,6 +470,7 @@ Repository Variables (`Settings > Secrets and variables > Actions > Variables`):
 - `NORTHFLANK_PROJECT_ID`
 - `NORTHFLANK_SERVICE_ID`
 - `NORTHFLANK_MIGRATE_JOB_ID`
+- `NORTHFLANK_RETRY_JOB_ID` (optional)
 - `NORTHFLANK_REGISTRY_CREDENTIALS_ID`
 
 Repository Secrets (`Settings > Secrets and variables > Actions > Secrets`):
@@ -422,7 +485,7 @@ Workflow permissions (`Settings > Actions > General`):
 
 GHCR visibility:
 
-- Keep images under `ghcr.io/<owner>/<repo>-runtime`, `-migrate`, `-seed`
+- Keep images under `ghcr.io/<owner>/<repo>-runtime`, `-migrate-seed`, `-retry`
 - Set package visibility to public in the GHCR package settings if you want public pulls
 
 Fallback:
@@ -438,6 +501,9 @@ Fallback:
 - Set `TRUST_PROXY=true` when running behind managed ingress/load balancers.
 - With Neon, use pooled `DATABASE_URL` for runtime and direct `DIRECT_URL` for Prisma migrations.
 - Set strong `CONTACT_FINGERPRINT_SALT` and enable Turnstile in public deployments.
+- Set `DISCORD_WEBHOOK_URL` and `CONTACT_NOTIFICATION_ENABLED=true` to enable delivery notifications.
+- Schedule `contact:retry-delivery:compiled` as an operational job if webhook delivery can fail transiently.
+- Keep `RUN_SEED_AFTER_MIGRATE=false` by default in production migrate jobs.
 - Keep `BOOTSTRAP_ADMIN_ENABLED=false` by default; enable only for controlled bootstrap events.
 - This app supports `<KEY>_FILE` secret variants for sensitive keys in container orchestrators.
 - Run migrations during deploy with:

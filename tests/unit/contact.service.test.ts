@@ -46,6 +46,11 @@ describe('submitContactRequest', () => {
         CONTACT_MAX_BY_IP_PER_HOUR: 30,
         CONTACT_MAX_BY_EMAIL_PER_HOUR: 8,
         CONTACT_FINGERPRINT_SALT: 'test_contact_fingerprint_salt',
+        CONTACT_NOTIFICATION_ENABLED: false,
+        DISCORD_WEBHOOK_URL: undefined,
+        DISCORD_WEBHOOK_TIMEOUT_MS: 5000,
+        CONTACT_DELIVERY_MAX_ATTEMPTS: 5,
+        CONTACT_DELIVERY_BATCH_SIZE: 50,
         TURNSTILE_SECRET_KEY: '',
         TURNSTILE_VERIFY_URL: 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
       }
@@ -68,7 +73,8 @@ describe('submitContactRequest', () => {
         message: 'Hello',
         fingerprint: expect.any(String),
         ipHash: expect.any(String),
-        userAgent: null
+        userAgent: null,
+        deliveryStatus: 'SKIPPED'
       }
     });
 

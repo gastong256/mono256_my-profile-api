@@ -6,7 +6,7 @@ This API uses a modular monolith with clear boundaries and low ceremony:
 
 - `src/app`: application composition (app factory, plugin registration, route registration)
 - `src/plugins`: technical concerns (CORS, JWT, Prisma, Swagger, sensible)
-- `src/modules`: domain-oriented modules (`health`, `contact`, `auth`) with route/schema/service separation
+- `src/modules`: domain-oriented modules (`health`, `contact`, `auth`, `admin`) with route/schema/service separation
 - `src/config`: environment loading and validation
 - `src/lib`: infrastructure helpers (logger, Prisma singleton)
 - `src/shared`: reusable schemas/types/utils
@@ -31,6 +31,9 @@ The codebase is intentionally minimal today but can grow cleanly:
 - Swagger/OpenAPI is generated from route schemas.
 - Prisma provides PostgreSQL persistence for `User` authentication and `ContactSubmission` storage.
 - Contact submissions are protected with layered anti-spam controls (rate limiting, honeypot, duplicate and velocity checks, optional Turnstile verification).
+- Contact delivery is tracked with explicit states (`PENDING`, `SENT`, `FAILED`, `SKIPPED`) and uses Discord webhook dispatch with bounded timeout.
+- Delivery retries are exposed as an operational script to reprocess pending/failed records without introducing queue infrastructure yet.
+- Admin endpoints provide authenticated retrieval and review-state transitions for contact submissions.
 - Bootstrap admin user creation can run on startup through explicit environment toggles, which is useful in managed deploy flows.
 - `GET /health` is liveness; `GET /ready` checks runtime readiness with database ping.
 - Helmet and route-level rate limiting provide baseline API hardening without heavy infrastructure.

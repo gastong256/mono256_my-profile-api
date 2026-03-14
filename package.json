@@ -19,7 +19,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "contact:retry-delivery": "tsx src/scripts/retry-contact-deliveries.ts",
+    "contact:retry-delivery:compiled": "node dist/scripts/retry-contact-deliveries.js"
   },
   "dependencies": {
     "@fastify/cors": "^10.1.0",

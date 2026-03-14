@@ -35,11 +35,13 @@ DIRECT_URL=postgresql://...@ep-xxx.<region>.aws.neon.tech/<db>?sslmode=require&c
 
 ## 3) Northflank workloads
 
-Use three workloads from this repository:
+Use up to three workloads from this repository:
 
 1. API service (long-running)
-2. Migration job (run per release)
-3. Optional seed job (manual bootstrap)
+2. Migrate-seed job (run per release)
+3. Optional contact-delivery retry job (manual or scheduled)
+
+Free tier note: if your workspace is capped at two jobs, keep these two and do not create a standalone seed job.
 
 ### API service configuration
 
@@ -54,25 +56,26 @@ Health checks:
 - Liveness path: `/health`
 - Readiness path: `/ready`
 
-### Migration job configuration
+### Migrate-seed job configuration
 
 - Build type: Dockerfile
 - Dockerfile path: `./Dockerfile`
 - Build context: repo root
-- Docker target: `migrate`
-- Command: `pnpm prisma:migrate:deploy`
+- Docker target: `migrate-seed`
+- Command: use image default command
 
-Run this job before promoting a new API release.
+This job always runs `prisma migrate deploy`.
+It only runs seed when `RUN_SEED_AFTER_MIGRATE=true`.
 
-### Seed job configuration (optional)
+### Contact delivery retry job (optional)
 
 - Build type: Dockerfile
 - Dockerfile path: `./Dockerfile`
 - Build context: repo root
-- Docker target: `seed`
-- Command: `pnpm prisma:seed`
+- Docker target: `runtime`
+- Command: `node dist/scripts/retry-contact-deliveries.js`
 
-Run this only when you explicitly need to bootstrap or rotate a local admin user.
+Use this as a manual or scheduled job to retry failed/pending Discord deliveries.
 
 ## 4) Runtime environment variables (API service)
 
@@ -103,6 +106,11 @@ CONTACT_FINGERPRINT_SALT=<at-least-16-characters-random-salt>
 CONTACT_REQUIRE_TURNSTILE=true
 TURNSTILE_SECRET_KEY=<cloudflare-turnstile-secret>
 TURNSTILE_VERIFY_URL=https://challenges.cloudflare.com/turnstile/v0/siteverify
+CONTACT_NOTIFICATION_ENABLED=true
+DISCORD_WEBHOOK_URL=<discord-webhook-url>
+DISCORD_WEBHOOK_TIMEOUT_MS=5000
+CONTACT_DELIVERY_MAX_ATTEMPTS=5
+CONTACT_DELIVERY_BATCH_SIZE=50
 
 AUTH_RATE_LIMIT_MAX=5
 AUTH_RATE_LIMIT_WINDOW=1 minute
@@ -114,14 +122,18 @@ BOOTSTRAP_ADMIN_EMAIL=
 BOOTSTRAP_ADMIN_NAME=Admin User
 BOOTSTRAP_ADMIN_PASSWORD=
 BOOTSTRAP_ADMIN_UPDATE_EXISTING=false
+RUN_SEED_AFTER_MIGRATE=false
+ALLOW_PROD_SEED=false
 ```
 
-## 5) Runtime environment variables (migration job)
+## 5) Runtime environment variables (migrate-seed and retry jobs)
 
-Attach the same secret group or an equivalent one to the migration job:
+Attach the same secret group or an equivalent one to the jobs:
 
 - `DATABASE_URL`
 - `DIRECT_URL`
+- `RUN_SEED_AFTER_MIGRATE` (default `false` for production)
+- `ALLOW_PROD_SEED` (required as `true` only when you intentionally seed in production)
 
 `DIRECT_URL` is required for stable Prisma migrations with pooled database providers.
 
@@ -132,6 +144,7 @@ For file-based secrets, this app supports `<KEY>_FILE` for:
 - `JWT_SECRET`
 - `CONTACT_FINGERPRINT_SALT`
 - `TURNSTILE_SECRET_KEY`
+- `DISCORD_WEBHOOK_URL`
 - `BOOTSTRAP_ADMIN_PASSWORD`
 
 ## 6) Release flow
@@ -151,8 +164,9 @@ The repository also provides:
 - `Release Images and Deploy` workflow:
   - triggered by published GitHub releases
   - pushes immutable GHCR images (`vX.Y.Z`, `sha-<commit>`)
-  - updates Northflank migrate job and API service image references
-  - runs migrate job before API deploy
+  - updates Northflank migrate-seed job and API service image references
+  - optionally updates retry job image when `NORTHFLANK_RETRY_JOB_ID` is configured
+  - runs migrate-seed job before API deploy
 
 Rollback approach:
 
@@ -168,6 +182,7 @@ Run after each deploy:
 3. `POST /contact` returns 200 for valid payload.
 4. `POST /auth/login` returns token for seeded/local user in non-production only.
 5. `GET /auth/me` works with bearer token.
+6. `GET /admin/contact-submissions` returns 200 with bearer token.
 
 ## 8) Security notes
 
@@ -176,6 +191,9 @@ Run after each deploy:
 - Rotate `JWT_SECRET` when credentials leak or team membership changes.
 - For contact forms, keep `CONTACT_REQUIRE_TURNSTILE=true` in public production deployments.
 - Keep contact form protected by frontend controls (hidden honeypot field + client validation).
+- Keep `CONTACT_NOTIFICATION_ENABLED=true` only when `DISCORD_WEBHOOK_URL` is configured.
+- Schedule periodic delivery retries if Discord notifications are operationally required.
+- Keep `RUN_SEED_AFTER_MIGRATE=false` for normal production releases.
 - Keep `BOOTSTRAP_ADMIN_ENABLED=false` by default and enable it only for controlled bootstrap operations.
 
 ## 9) GitHub to Northflank deployment wiring
@@ -185,6 +203,7 @@ Add GitHub repository variables:
 - `NORTHFLANK_PROJECT_ID`
 - `NORTHFLANK_SERVICE_ID`
 - `NORTHFLANK_MIGRATE_JOB_ID`
+- `NORTHFLANK_RETRY_JOB_ID` (optional)
 - `NORTHFLANK_REGISTRY_CREDENTIALS_ID`
 
 Add GitHub repository secret:
@@ -194,18 +213,19 @@ Add GitHub repository secret:
 
 How to obtain values:
 
-1. `NORTHFLANK_API_KEY`: Northflank account settings -> API keys -> create key.
+1. `NORTHFLANK_API_KEY`: Northflank team settings -> API access (roles + tokens) -> create token.
 2. `NORTHFLANK_PROJECT_ID`: from the project settings/details page.
 3. `NORTHFLANK_SERVICE_ID`: from your API service details page.
 4. `NORTHFLANK_MIGRATE_JOB_ID`: from your migrate job details page.
-5. `NORTHFLANK_REGISTRY_CREDENTIALS_ID`: create saved registry credentials in Northflank for GHCR, then copy its ID.
-6. `SEMANTIC_RELEASE_PAT`: GitHub -> Settings -> Developer settings -> Personal access tokens -> create token with repository workflow/release permissions.
+5. `NORTHFLANK_RETRY_JOB_ID`: from your retry job details page (optional).
+6. `NORTHFLANK_REGISTRY_CREDENTIALS_ID`: create saved registry credentials in Northflank for GHCR, then copy its ID.
+7. `SEMANTIC_RELEASE_PAT`: GitHub -> Settings -> Developer settings -> Personal access tokens -> create token with repository workflow/release permissions.
 
 GHCR notes:
 
 - The workflow publishes to:
   - `ghcr.io/<owner>/<repo>-runtime`
-  - `ghcr.io/<owner>/<repo>-migrate`
-  - `ghcr.io/<owner>/<repo>-seed`
+  - `ghcr.io/<owner>/<repo>-migrate-seed`
+  - `ghcr.io/<owner>/<repo>-retry`
 - If you want public images, set package visibility to public in GitHub Packages settings.
 - `Release Images and Deploy` also supports manual `workflow_dispatch` with a `release_tag` input for fallback runs.
