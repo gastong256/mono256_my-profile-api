@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/gastong256/mono256_my-profile-api/compare/v1.2.1...v1.3.0) (2026-03-14)
+
+### Features
+
+* add subject support across API, Prisma, anti-spam fingerprint, Discord delivery, and admin views ([2a81c8a](https://github.com/gastong256/mono256_my-profile-api/commit/2a81c8af479202ad6452ffd9ba906d4a0847f248))
+
 ## [1.2.1](https://github.com/gastong256/mono256_my-profile-api/compare/v1.2.0...v1.2.1) (2026-03-14)
 
 ### Bug Fixes
