@@ -137,6 +137,25 @@ describe('Contact route', () => {
 
   it('POST /contact rejects spam honeypot field', async () => {
     const app = await appPromise;
+    const createMock = vi.fn().mockResolvedValue({});
+    const countMock = vi.fn().mockResolvedValue(0);
+    const findFirstMock = vi.fn().mockResolvedValue(null);
+
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).create = createMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).count = countMock;
+    (app.prisma.contactSubmission as unknown as {
+      create: typeof createMock;
+      count: typeof countMock;
+      findFirst: typeof findFirstMock;
+    }).findFirst = findFirstMock;
 
     const response = await app.inject({
       method: 'POST',
@@ -149,6 +168,11 @@ describe('Contact route', () => {
       }
     });
 
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(200);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Contact request received'
+    });
   });
 });

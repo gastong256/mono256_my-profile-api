@@ -9,6 +9,21 @@ export async function submitContactRequest(
   payload: ContactBody,
   context: { ip: string; userAgent?: string }
 ): Promise<ContactResponse> {
+  if (payload.website && payload.website.trim().length > 0) {
+    fastify.log.warn(
+      {
+        event: 'contact.submission.honeypot_ignored',
+        ip: context.ip
+      },
+      'Honeypot-triggered contact submission ignored'
+    );
+
+    return {
+      success: true,
+      message: 'Contact request received'
+    };
+  }
+
   const normalizedEmail = payload.email.toLowerCase();
 
   const spamResult = await runContactSpamProtection(fastify, payload, {
