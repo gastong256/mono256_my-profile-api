@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.4...v1.2.0) (2026-03-14)
+
+### Features
+
+* merge migrate+seed job with guardrails and add dedicated retry-delivery GHCR image/job; extend admin and contact feature ([adddf65](https://github.com/gastong256/mono256_my-profile-api/commit/adddf65ed7b192b635d6edf6a26eee05c0d5beed))
+
 ## [1.1.4](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.3...v1.1.4) (2026-03-13)
 
 ### Bug Fixes
