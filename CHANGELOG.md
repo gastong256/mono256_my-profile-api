@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/gastong256/mono256_my-profile-api/compare/v1.2.0...v1.2.1) (2026-03-14)
+
+### Bug Fixes
+
+* return silent success for honeypot submissions and skip persistence ([f7dec26](https://github.com/gastong256/mono256_my-profile-api/commit/f7dec26c087fbdf43a974220a569267b7556cf85))
+
 ## [1.2.0](https://github.com/gastong256/mono256_my-profile-api/compare/v1.1.4...v1.2.0) (2026-03-14)
 
 ### Features
