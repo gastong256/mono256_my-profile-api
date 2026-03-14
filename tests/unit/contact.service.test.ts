@@ -58,6 +58,7 @@ describe('submitContactRequest', () => {
 
     const payload = {
       name: 'John Doe',
+      subject: 'Project inquiry',
       email: 'John@Example.com',
       message: 'Hello'
     };
@@ -69,6 +70,7 @@ describe('submitContactRequest', () => {
     expect(create).toHaveBeenCalledWith({
       data: {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello',
         fingerprint: expect.any(String),

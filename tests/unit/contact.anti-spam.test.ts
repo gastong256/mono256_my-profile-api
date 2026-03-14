@@ -69,6 +69,7 @@ describe('runContactSpamProtection', () => {
       fastify,
       {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello'
       },
@@ -102,6 +103,7 @@ describe('runContactSpamProtection', () => {
         fastify,
         {
           name: 'John Doe',
+          subject: 'Project inquiry',
           email: 'john@example.com',
           message: 'Hello'
         },

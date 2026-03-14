@@ -45,6 +45,7 @@ export async function listContactSubmissions(
   items: Array<{
     id: string;
     name: string;
+    subject: string;
     email: string;
     messagePreview: string;
     reviewStatus: 'NEW' | 'IN_REVIEW' | 'RESOLVED' | 'SPAM';
@@ -82,6 +83,7 @@ export async function listContactSubmissions(
         select: {
           id: true,
           name: true,
+          subject: true,
           email: true,
           message: true,
           reviewStatus: true,
@@ -100,6 +102,7 @@ export async function listContactSubmissions(
     items: submissions.map((submission) => ({
       id: submission.id,
       name: submission.name,
+      subject: submission.subject,
       email: submission.email,
       messagePreview: toMessagePreview(submission.message),
       reviewStatus: submission.reviewStatus,
@@ -126,6 +129,7 @@ export async function getContactSubmissionById(
   submission: {
     id: string;
     name: string;
+    subject: string;
     email: string;
     message: string;
     reviewStatus: 'NEW' | 'IN_REVIEW' | 'RESOLVED' | 'SPAM';
@@ -146,6 +150,7 @@ export async function getContactSubmissionById(
       select: {
         id: true,
         name: true,
+        subject: true,
         email: true,
         message: true,
         reviewStatus: true,
@@ -164,6 +169,7 @@ export async function getContactSubmissionById(
     submission: {
       id: submission.id,
       name: submission.name,
+      subject: submission.subject,
       email: submission.email,
       message: submission.message,
       reviewStatus: submission.reviewStatus,

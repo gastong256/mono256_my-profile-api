@@ -18,8 +18,8 @@ function hashValue(value: string, salt: string): string {
   return createHash('sha256').update(`${salt}:${value}`).digest('hex');
 }
 
-function normalizeMessage(message: string): string {
-  return message.trim().replace(/\s+/g, ' ').toLowerCase();
+function normalizeText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 async function verifyTurnstileToken(
@@ -91,8 +91,12 @@ export async function runContactSpamProtection(
   );
 
   const normalizedEmail = payload.email.toLowerCase();
-  const normalizedMessage = normalizeMessage(payload.message);
-  const fingerprint = hashValue(`${normalizedEmail}:${normalizedMessage}`, fastify.config.CONTACT_FINGERPRINT_SALT);
+  const normalizedSubject = normalizeText(payload.subject);
+  const normalizedMessage = normalizeText(payload.message);
+  const fingerprint = hashValue(
+    `${normalizedEmail}:${normalizedSubject}:${normalizedMessage}`,
+    fastify.config.CONTACT_FINGERPRINT_SALT
+  );
   const ipHash = hashValue(context.ip, fastify.config.CONTACT_FINGERPRINT_SALT);
 
   const [countByIp, countByEmail, duplicateInWindow, recentByIp] = await Promise.all([

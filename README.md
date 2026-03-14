@@ -324,6 +324,7 @@ Body:
 ```json
 {
   "name": "John Doe",
+  "subject": "Project inquiry",
   "email": "john@example.com",
   "message": "Hello",
   "website": "",
@@ -344,6 +345,7 @@ Behavior:
 
 - validates input with Zod
 - persists a `ContactSubmission` record in PostgreSQL via Prisma
+- supports explicit contact subjects (`subject`) for frontend form compatibility
 - accepts an optional honeypot field (`website`) that should stay empty
 - enforces velocity limits and duplicate suppression on the server side
 - supports optional Turnstile verification when enabled
@@ -363,6 +365,8 @@ Query params:
 - `reviewStatus` (`NEW`, `IN_REVIEW`, `RESOLVED`, `SPAM`) optional
 - `deliveryStatus` (`PENDING`, `SENT`, `FAILED`, `SKIPPED`) optional
 
+Each item includes: `id`, `name`, `subject`, `email`, `messagePreview`, review/delivery statuses, attempts, and timestamps.
+
 ### `GET /admin/contact-submissions/:id`
 
 Header:
@@ -370,6 +374,8 @@ Header:
 - `Authorization: Bearer <token>`
 
 Returns full stored contact submission details.
+
+The detail payload includes `subject` and full `message`.
 
 ### `PATCH /admin/contact-submissions/:id`
 

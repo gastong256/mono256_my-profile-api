@@ -38,6 +38,7 @@ describe('Admin contact submission routes', () => {
         {
           id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
           name: 'John Doe',
+          subject: 'Project inquiry',
           email: 'john@example.com',
           message: 'Hello from admin route test',
           reviewStatus: 'NEW',
@@ -71,6 +72,7 @@ describe('Admin contact submission routes', () => {
         {
           id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
           name: 'John Doe',
+          subject: 'Project inquiry',
           email: 'john@example.com',
           messagePreview: 'Hello from admin route test',
           reviewStatus: 'NEW',
@@ -100,6 +102,7 @@ describe('Admin contact submission routes', () => {
     }).findUniqueOrThrow = async () => ({
       id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
       name: 'John Doe',
+      subject: 'Project inquiry',
       email: 'john@example.com',
       message: 'Hello from details endpoint',
       reviewStatus: 'IN_REVIEW',
@@ -131,6 +134,7 @@ describe('Admin contact submission routes', () => {
       submission: {
         id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello from details endpoint',
         reviewStatus: 'IN_REVIEW',

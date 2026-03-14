@@ -11,6 +11,7 @@ type ContactDeliveryCandidate = Pick<
   ContactSubmission,
   'id' |
   'name' |
+  'subject' |
   'email' |
   'message' |
   'createdAt' |
@@ -70,6 +71,11 @@ function buildDiscordPayload(submission: ContactDeliveryCandidate, config: AppCo
       name: 'Email',
       value: truncate(normalizeForEmbed(submission.email), MAX_EMBED_FIELD_LENGTH),
       inline: true
+    },
+    {
+      name: 'Subject',
+      value: truncate(normalizeForEmbed(submission.subject), MAX_EMBED_FIELD_LENGTH),
+      inline: false
     }
   ];
 
@@ -245,6 +251,7 @@ export async function retryPendingContactDeliveries(
       id: true,
       name: true,
       email: true,
+      subject: true,
       message: true,
       createdAt: true,
       deliveryStatus: true,

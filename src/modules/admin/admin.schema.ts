@@ -21,6 +21,7 @@ export const updateContactSubmissionBodySchema = z.object({
 const contactSubmissionSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  subject: z.string(),
   email: z.string().email(),
   messagePreview: z.string(),
   reviewStatus: contactReviewStatusSchema,
@@ -46,6 +47,7 @@ export const contactSubmissionDetailResponseSchema = z.object({
   submission: z.object({
     id: z.string().uuid(),
     name: z.string(),
+    subject: z.string(),
     email: z.string().email(),
     message: z.string(),
     reviewStatus: contactReviewStatusSchema,

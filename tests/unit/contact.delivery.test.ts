@@ -77,6 +77,7 @@ describe('contact delivery', () => {
     const status = await deliverContactSubmission(prisma, logger, baseConfig, {
       id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
       name: 'John Doe',
+      subject: 'Project inquiry',
       email: 'john@example.com',
       message: 'Hello',
       createdAt: new Date('2026-03-13T00:00:00.000Z'),
@@ -118,6 +119,7 @@ describe('contact delivery', () => {
     }, {
       id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
       name: 'John Doe',
+      subject: 'Project inquiry',
       email: 'john@example.com',
       message: 'Hello',
       createdAt: new Date('2026-03-13T00:00:00.000Z'),
@@ -141,6 +143,7 @@ describe('contact delivery', () => {
       {
         id: '1735c885-c42c-4cf6-92ed-f9ce32d45e85',
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello',
         createdAt: new Date('2026-03-13T00:00:00.000Z'),

@@ -20,6 +20,7 @@ describe('Contact route', () => {
     const createMock = vi.fn().mockResolvedValue({
       id: 'd1360a00-0a90-4ef0-b4f7-8ce4c7950de4',
       name: 'John Doe',
+      subject: 'Project inquiry',
       email: 'john@example.com',
       message: 'Hello',
       createdAt: new Date()
@@ -48,6 +49,7 @@ describe('Contact route', () => {
       url: '/contact',
       payload: {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello'
       }
@@ -58,6 +60,7 @@ describe('Contact route', () => {
     expect(createMock).toHaveBeenCalledWith({
       data: {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello',
         fingerprint: expect.any(String),
@@ -102,6 +105,7 @@ describe('Contact route', () => {
       url: '/contact',
       payload: {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello'
       }
@@ -123,6 +127,7 @@ describe('Contact route', () => {
       url: '/contact',
       payload: {
         name: 'A',
+        subject: 'A',
         email: 'invalid_email',
         message: ''
       }
@@ -135,7 +140,7 @@ describe('Contact route', () => {
     });
   });
 
-  it('POST /contact rejects spam honeypot field', async () => {
+  it('POST /contact silently ignores honeypot submissions', async () => {
     const app = await appPromise;
     const createMock = vi.fn().mockResolvedValue({});
     const countMock = vi.fn().mockResolvedValue(0);
@@ -162,6 +167,7 @@ describe('Contact route', () => {
       url: '/contact',
       payload: {
         name: 'John Doe',
+        subject: 'Project inquiry',
         email: 'john@example.com',
         message: 'Hello',
         website: 'https://bot.example'

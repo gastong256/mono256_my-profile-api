@@ -54,6 +54,7 @@ export async function submitContactRequest(
   const submission = await fastify.prisma.contactSubmission.create({
     data: {
       name: payload.name,
+      subject: payload.subject,
       email: normalizedEmail,
       message: payload.message,
       fingerprint: spamResult.fingerprint,
@@ -73,6 +74,7 @@ export async function submitContactRequest(
       event: 'contact.submission.created',
       submissionId: submission.id,
       nameLength: payload.name.length,
+      subjectLength: payload.subject.length,
       messageLength: payload.message.length,
       ip: context.ip
     },
